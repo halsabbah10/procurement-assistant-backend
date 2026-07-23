@@ -108,7 +108,9 @@ def _is_out_of_scope(user_message: str) -> bool:
         "Is this question about California state government procurement/purchase "
         f"order data? Answer only YES or NO.\n\nQuestion: {user_message}"
     )
-    return "NO" in response.content.upper()
+    # Same `.text` vs `.content` normalization as below — `.content` can be a
+    # list of content blocks rather than a plain string.
+    return "NO" in response.text.upper()
 
 
 async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
@@ -123,42 +125,63 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
 
     settings = get_settings()
     mongo_client = MongoClient(settings.mongodb_uri)
-    checkpointer = MongoDBSaver(mongo_client)
-    config = {"configurable": {"thread_id": thread_id}, "recursion_limit": MAX_ITERATIONS}
+    # NOTE: this whole block used to call `mongo_client.close()` explicitly on
+    # each return path, which only runs on normal completion. `run_agent` is
+    # an async generator consumed by an SSE endpoint (Task 12) — if the
+    # client disconnects mid-stream (the ordinary case for a user closing a
+    # tab mid-response), the generator is abandoned at a `yield` and Python
+    # throws GeneratorExit into it rather than letting it run to a `return`,
+    # so those explicit `.close()` calls would never execute and the
+    # MongoClient (with its own connection pool) would leak. A try/finally
+    # around the whole body runs on every exit path, including GeneratorExit.
+    try:
+        checkpointer = MongoDBSaver(mongo_client)
+        config = {"configurable": {"thread_id": thread_id}, "recursion_limit": MAX_ITERATIONS}
 
-    for model_name, is_escalation in ((SONNET_MODEL, False), (OPUS_MODEL, True)):
-        agent = _build_agent(model_name, checkpointer)
-        final_text = None
-        try:
-            async for event in agent.astream(
-                {"messages": [("user", user_message)]}, config, stream_mode="values"
-            ):
-                last_message = event["messages"][-1]
-                if getattr(last_message, "type", None) == "ai" and not getattr(
-                    last_message, "tool_calls", None
+        for model_name, is_escalation in ((SONNET_MODEL, False), (OPUS_MODEL, True)):
+            agent = _build_agent(model_name, checkpointer)
+            final_text = None
+            try:
+                async for event in agent.astream(
+                    {"messages": [("user", user_message)]}, config, stream_mode="values"
                 ):
-                    final_text = last_message.content
-                    yield {"type": "step", "text": f"[{model_name}] {final_text[:80]}"}
-        except Exception as exc:  # noqa: BLE001 — deliberately broad: any
-            # failure on the Sonnet attempt should trigger escalation, not
-            # crash the request.
-            if is_escalation:
-                yield {
-                    "type": "final_answer",
-                    "text": f"I wasn't able to answer that confidently. ({exc})",
-                }
-                mongo_client.close()
+                    last_message = event["messages"][-1]
+                    if getattr(last_message, "type", None) == "ai" and not getattr(
+                        last_message, "tool_calls", None
+                    ):
+                        # NOTE: use `.text` (a property that normalizes both
+                        # the plain-string case and the extended-thinking
+                        # case, where `.content` is a list of content-block
+                        # dicts rather than a string) instead of `.content`
+                        # directly. With `.content`, an extended-thinking
+                        # response's final_text would be a list, so a
+                        # downstream `"120,636" in final_text` check silently
+                        # returns False even though the model answered
+                        # correctly, and the yielded chunk's `text` field
+                        # would violate the str contract the SSE router
+                        # (Task 12) depends on. Reproduced live: ~50% of runs
+                        # hit this before the fix.
+                        final_text = last_message.text
+                        yield {"type": "step", "text": f"[{model_name}] {final_text[:80]}"}
+            except Exception as exc:  # noqa: BLE001 — deliberately broad: any
+                # failure on the Sonnet attempt should trigger escalation,
+                # not crash the request.
+                if is_escalation:
+                    yield {
+                        "type": "final_answer",
+                        "text": f"I wasn't able to answer that confidently. ({exc})",
+                    }
+                    return
+                continue
+
+            if final_text:
+                yield {"type": "final_answer", "text": final_text}
                 return
-            continue
 
-        if final_text:
-            yield {"type": "final_answer", "text": final_text}
-            mongo_client.close()
-            return
-
-    yield {
-        "type": "final_answer",
-        "text": "I wasn't able to answer that confidently after checking with "
-        "both models — try rephrasing the question.",
-    }
-    mongo_client.close()
+        yield {
+            "type": "final_answer",
+            "text": "I wasn't able to answer that confidently after checking with "
+            "both models — try rephrasing the question.",
+        }
+    finally:
+        mongo_client.close()
