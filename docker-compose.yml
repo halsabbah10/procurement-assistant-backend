@@ -1,0 +1,26 @@
+services:
+  mongodb:
+    image: mongodb/mongodb-atlas-local:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017
+      MONGODB_DB_NAME: procurement
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      VOYAGE_API_KEY: ${VOYAGE_API_KEY}
+      ALLOWED_ORIGINS: http://localhost:5173
+      ENVIRONMENT: development
+    depends_on:
+      - mongodb
+    volumes:
+      - .:/app
+
+volumes:
+  mongodb_data:
