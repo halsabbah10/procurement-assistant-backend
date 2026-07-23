@@ -1,0 +1,50 @@
+[
+  {
+    "id": "total-orders-period",
+    "question": "How many purchase orders were created in fiscal year 2013-2014?",
+    "category": "total_orders_in_period",
+    "expect_contains": ["120,636", "120636"]
+  },
+  {
+    "id": "highest-spending-quarter",
+    "question": "Which fiscal year and quarter had the highest total spending?",
+    "category": "highest_spending_period",
+    "expect_contains": ["2014-2015"]
+  },
+  {
+    "id": "most-frequent-items",
+    "question": "What are the 5 most frequently ordered item names?",
+    "category": "most_frequent_line_items",
+    "expect_contains": []
+  },
+  {
+    "id": "total-spend-overall",
+    "question": "What is the total spend across the entire dataset?",
+    "category": "other_analytics",
+    "expect_contains": ["151", "billion"]
+  },
+  {
+    "id": "top-department",
+    "question": "Which department has the most purchase orders?",
+    "category": "other_analytics",
+    "expect_contains": ["Corrections and Rehabilitation"]
+  },
+  {
+    "id": "semantic-fuzzy",
+    "question": "Find purchases related to office furniture, even if the exact words don't match.",
+    "category": "semantic_search",
+    "expect_contains": []
+  },
+  {
+    "id": "out-of-scope",
+    "question": "What's the weather like today?",
+    "category": "out_of_scope",
+    "expect_contains": ["California state purchase order"]
+  },
+  {
+    "id": "multi-step",
+    "question": "Among departments with more than 10,000 orders, which one has the highest average order value?",
+    "category": "multi_step",
+    "expect_contains": []
+  }
+]

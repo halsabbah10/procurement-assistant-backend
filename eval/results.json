@@ -1,0 +1,50 @@
+[
+  {
+    "id": "total-orders-period",
+    "category": "total_orders_in_period",
+    "status": "pass",
+    "answer": "There were **120,636** purchase orders created in fiscal year 2013-2014."
+  },
+  {
+    "id": "highest-spending-quarter",
+    "category": "highest_spending_period",
+    "status": "pass",
+    "answer": "**Fiscal Year 2014-2015, Quarter 4 (Apr\u2013Jun 2015)** had the highest total spending, with **$28,804,820,727.65** in total purchase order value.\n\nFor context, here are the top 5 fiscal year/quarter combinations by total spending:\n\n| Rank | Fiscal Year | Quarter | Total Spending |\n|------|------------|---------|-----------------|\n| 1 | 2014-2015 | Q4 | $28,804,820,727.65 |\n| 2 | 2012-2013 | Q3 | $25,788,088,561.68 |\n| 3 | 2012-2013 | Q4 | $19,013,469,394.04 |\n| 4 | 2013-2014 | Q4 | $15,618,374,092.74 |\n| 5 | 2012-2013 | Q1 | $12,566,134,255.53 |\n\nNote: These totals are large enough that it's worth flagging they may be influenced by a small number of very large purchase orders (or bulk/blanket orders) rather than reflecting \"typical\" quarterly spending \u2014 let me know if you'd like me to check for outliers driving these totals."
+  },
+  {
+    "id": "most-frequent-items",
+    "category": "most_frequent_line_items",
+    "status": "review",
+    "answer": "The 5 most frequently ordered item names in the `purchase_orders` collection are:\n\n| Rank | Item Name | Number of Orders |\n|------|-----------|-------------------|\n| 1 | **Medical Supplies** | 2,916 |\n| 2 | **Contract** | 2,092 |\n| 3 | **ew** | 1,539 |\n| 4 | **Expert Witness** | 1,317 |\n| 5 | **medical vocational training** | 1,092 |\n\nNote: \"ew\" appears to be an abbreviation/variant of \"Expert Witness\" \u2014 if combined, that category would total 2,856 orders, putting it just behind \"Medical Supplies\" as the top item."
+  },
+  {
+    "id": "total-spend-overall",
+    "category": "other_analytics",
+    "status": "pass",
+    "answer": "The total spend across the entire dataset (all 346,018 purchase orders, fiscal years 2012\u20112013 through 2014\u20112015) is **$151,243,580,498.20** (approximately **$151.2 billion**)."
+  },
+  {
+    "id": "top-department",
+    "category": "other_analytics",
+    "status": "pass",
+    "answer": "The department with the most purchase orders is the **Department of Corrections and Rehabilitation**, with **57,537 purchase orders** \u2014 well ahead of the next closest department, Correctional Health Care Services (32,250).\n\nTop 5 for context:\n1. Corrections and Rehabilitation, Department of \u2014 57,537\n2. Correctional Health Care Services \u2014 32,250\n3. Water Resources, Department of \u2014 28,331\n4. Forestry and Fire Protection, Department of \u2014 23,244\n5. State Hospitals, Department of \u2014 18,968"
+  },
+  {
+    "id": "semantic-fuzzy",
+    "category": "semantic_search",
+    "status": "review",
+    "answer": "Here's what I found for office-furniture\u2013related purchases. (Note: the semantic-search tool was unavailable due to a rate limit, so I identified matches using the UNSPSC commodity taxonomy in the data \u2014 `family_title` / `class_title` / `commodity_title` \u2014 which reliably captures furniture even when free-text item names don't say \"furniture.\")\n\n## Results\n\n**Broad furniture categories** (`family_title` = \"Accommodation furniture\" or \"Commercial and industrial furniture\"):\n- **7,202 purchase-order line items** totaling **$105,675,635.81**\n\n**Strictly the \"Office furniture\" class** (`class_title` = \"Office furniture\" \u2014 desks, filing cabinets, credenzas, modular connectors, etc.):\n- **963 line items** totaling **$21,664,688.63**\n\n## Top office-furniture commodity types by spend\n\n| Commodity | Line items | Total spend |\n|---|---|---|\n| Furniture set | 291 | $20,589,773.02 |\n| Chairs | 2,426 | $17,725,514 |\n| Modular furniture connectors | 231 | $12,865,950.56 |\n| Arm chair | 468 | $3,759,068.42 |\n| Modular staff office packages | 148 | $3,221,682.55 |\n| Desks | 217 | $2,999,741.43 |\n| Computer support parts/accessories | 357 | $2,887,235.30 |\n| Modular reception office packages | 21 | $2,556,877.09 |\n| Furniture moving discs | 24 | $2,209,925.07 |\n| Credenzas | 99 | $2,049,734.93 |\n| Filing cabinets or accessories | 173 | $2,019,376.39 |\n| Task seating | 154 | $1,077,158.60 |\n\nOther captured categories include tables, conferencing tables, bookcases, workstations/office packages (clerical, technical, executive, managerial), panel/partition systems, desking systems, storage cabinets, lockers, and seating (guest/lounge/stool/executive).\n\n## Caveats\n- The two broad families also sweep in some **non-office** furniture \u2014 e.g., beds/mattresses, car seats, outdoor tables/benches/umbrellas, and baby/toddler furniture. If you want a stricter \"office only\" figure, the $21.7M \"Office furniture\" class number is the cleanest, though it excludes chairs/tables/workstations that the taxonomy files under other classes.\n- A quick free-text check on the word \"furnitur*\" alone matched 8,096 items / $134.6M, but that's noisier (includes installation services, non-office contexts).\n\nWould you like me to narrow this to a specific fiscal year, department, or a curated \"office-only\" set of commodities?"
+  },
+  {
+    "id": "out-of-scope",
+    "category": "out_of_scope",
+    "status": "pass",
+    "answer": "I can only answer questions about the California state purchase order dataset (2012-2015). Try asking about spending, departments, suppliers, or specific items."
+  },
+  {
+    "id": "multi-step",
+    "category": "multi_step",
+    "status": "review",
+    "answer": "Among departments with more than 10,000 orders, the **Department of Transportation** has the highest average order value, at approximately **$246,422.74** per order (based on 17,644 orders). It narrowly edges out the Department of State Hospitals (avg \u2248 $239,648, 18,968 orders)."
+  }
+]
