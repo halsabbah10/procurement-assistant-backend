@@ -8,6 +8,7 @@ Usage: python eval/run_eval.py
 import asyncio
 import json
 import sys
+import uuid
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -16,8 +17,16 @@ from app.agent.graph import run_agent  # noqa: E402
 
 
 async def run_one(case: dict) -> tuple[str, str]:
+    # A fresh, unique thread_id every invocation is required: run_agent's
+    # MongoDBSaver checkpointer persists conversation state by thread_id
+    # across process runs, so a *static* id here means a second run of this
+    # script silently replays cached history (zero new tool calls) instead
+    # of genuinely re-querying the live agent — verified directly via
+    # checkpoint inspection after this bug let a stale semantic-search
+    # result get committed as if it were freshly validated.
     final_text = ""
-    async for chunk in run_agent(case["question"], thread_id=f"eval-{case['id']}"):
+    thread_id = f"eval-{case['id']}-{uuid.uuid4()}"
+    async for chunk in run_agent(case["question"], thread_id=thread_id):
         if chunk["type"] == "final_answer":
             final_text = chunk["text"]
     if not case["expect_contains"]:
