@@ -23,8 +23,11 @@ async def chat(request: Request, body: ChatRequest):
     limiter.record(client_ip)
 
     async def event_stream():
-        async for chunk in run_agent(body.message, thread_id=body.conversation_id):
-            yield f"data: {json.dumps(chunk)}\n\n"
+        try:
+            async for chunk in run_agent(body.message, thread_id=body.conversation_id):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'text': 'An error occurred while processing your request.'})}\n\n"
 
     return StreamingResponse(
         event_stream(),
