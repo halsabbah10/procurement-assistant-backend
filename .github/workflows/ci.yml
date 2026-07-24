@@ -12,6 +12,16 @@ jobs:
         image: mongodb/mongodb-atlas-local:latest
         ports:
           - 27017:27017
+        # Explicit readiness gate: this image boots a single-node replica set
+        # plus the local Atlas Search process, not just a bare mongod, so it
+        # can take longer than a plain `mongo` image to accept connections.
+        # GitHub Actions blocks steps on a service container until this
+        # reports healthy.
+        options: >-
+          --health-cmd "mongosh --eval 'db.runCommand({ping:1})' --quiet"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
