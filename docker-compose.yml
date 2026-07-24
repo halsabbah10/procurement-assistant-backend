@@ -5,6 +5,12 @@ services:
       - "27017:27017"
     volumes:
       - mongodb_data:/data/db
+      # mongodb-atlas-local writes its replica-set keyfile under /data/configdb;
+      # without persisting it too, a normal `down` + `up` on the retained
+      # mongodb_data volume crashes on boot ("Unable to acquire security
+      # key[s]") since the persisted /data/db then expects keyfile auth that
+      # no longer exists anywhere. Verified reproducible without this line.
+      - mongodb_configdb:/data/configdb
 
   backend:
     build: .
@@ -24,3 +30,4 @@ services:
 
 volumes:
   mongodb_data:
+  mongodb_configdb:
