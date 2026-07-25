@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from app.agent.graph import run_agent
 from app.core.rate_limit import RateLimiter
+from app.db.conversations import touch_conversation
 from app.schemas.chat import ChatRequest
 
 router = APIRouter()
@@ -21,6 +22,7 @@ async def chat(request: Request, body: ChatRequest):
             status_code=429,
         )
     limiter.record(client_ip)
+    await touch_conversation(body.conversation_id, body.message)
 
     async def event_stream():
         try:
