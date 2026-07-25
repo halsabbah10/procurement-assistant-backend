@@ -6,9 +6,10 @@ California state purchase orders (fiscal years 2012–2015, 346,018 records,
 with a semantic-search layer over UNSPSC purchasing categories for
 fuzzy/conceptual questions the exact data wording won't match.
 
-**Live API:** https://procurement-assistant-backend.onrender.com
 **Frontend repo:** https://github.com/halsabbah10/procurement-assistant-frontend
-**Live app:** https://frontend-two-mu-97.vercel.app
+
+Deployed on Render (backend) and Vercel (frontend) — live URLs shared
+separately with the assessment submission rather than published here.
 
 > First request after ~15 minutes of inactivity takes 30–60s — Render's free
 > tier spins the instance down when idle. The frontend shows a "waking up"
@@ -152,7 +153,7 @@ python eval/run_eval_live.py [url]    # golden queries against a real deployed b
 
 ## API reference
 
-All endpoints are under the Render URL above in production, `localhost:8000` locally.
+All endpoints are under the deployed Render URL in production, `localhost:8000` locally.
 
 | Method | Path | Purpose |
 |---|---|---|
