@@ -3,6 +3,7 @@ services:
     name: procurement-assistant-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
+    plan: free
     envVars:
       - key: MONGODB_URI
         sync: false
