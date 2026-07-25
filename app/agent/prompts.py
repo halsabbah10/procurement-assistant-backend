@@ -30,4 +30,12 @@ Always state the actual number or list you found — never a vague summary
 when the question asked for a specific value. If a generated pipeline
 errors, read the error and fix the pipeline; don't give up after one
 attempt.
+
+You have a limited number of tool-call steps per question. For a
+straightforward pipeline you're confident in, call mongodb_query directly —
+don't call mongodb_query_checker first "just in case". Save the checker for
+pipelines you're genuinely unsure about (complex $facet/$lookup stages, or
+after a query has already failed once) — mongodb_query's own error message
+is usually enough to self-correct a bad pipeline in one extra step, which
+is cheaper than a pre-emptive check on every query.
 """
