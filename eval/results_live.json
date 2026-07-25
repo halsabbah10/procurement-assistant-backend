@@ -1,0 +1,50 @@
+[
+  {
+    "id": "total-orders-period",
+    "category": "total_orders_in_period",
+    "status": "pass",
+    "answer": "There were **120,636 purchase orders** created in fiscal year 2013-2014."
+  },
+  {
+    "id": "highest-spending-quarter",
+    "category": "highest_spending_period",
+    "status": "pass",
+    "answer": "The fiscal year and quarter with the highest total spending was **FY 2014\u20112015, Quarter 4 (April\u2013June 2015)**, with total spending of **$28,804,820,727.65**.\n\nFor context, the next highest was FY 2012\u20112013, Quarter 3 (Jan\u2013Mar 2013) at $25,788,088,561.68."
+  },
+  {
+    "id": "most-frequent-items",
+    "category": "most_frequent_line_items",
+    "status": "review",
+    "answer": "The 5 most frequently ordered item names (by number of purchase order line items) are:\n\n1. **Medical Supplies** \u2013 2,916 orders\n2. **Contract** \u2013 2,092 orders\n3. **ew** \u2013 1,539 orders\n4. **Expert Witness** \u2013 1,317 orders\n5. **medical vocational training** \u2013 1,092 orders\n\nNote: \"ew\" appears to be an abbreviation/variant of \"Expert Witness\" but is stored as a distinct item name in the data, so it's listed separately per the raw values."
+  },
+  {
+    "id": "total-spend-overall",
+    "category": "other_analytics",
+    "status": "pass",
+    "answer": "The total spend across the entire dataset (all 346,018 purchase orders, fiscal years 2012\u20112013 through 2014\u20112015) is **$151,243,580,498.20** (\u2248$151.24 billion)."
+  },
+  {
+    "id": "top-department",
+    "category": "other_analytics",
+    "status": "pass",
+    "answer": "The department with the most purchase orders is the **Department of Corrections and Rehabilitation**, with **57,537 purchase orders** \u2014 well ahead of the next closest, Correctional Health Care Services (32,250)."
+  },
+  {
+    "id": "semantic-fuzzy",
+    "category": "semantic_search",
+    "status": "review",
+    "answer": "## Office Furniture Purchases\n\nSince the raw item text doesn't consistently say \"office furniture,\" I used semantic search against the UNSPSC category taxonomy to identify the relevant purchasing categories, then filtered the `purchase_orders` collection on `class_title = \"Office furniture\"` OR `family_title = \"Workstations and office packages\"` (which together capture desks, credenzas, filing cabinets, modular office packages, conferencing tables, etc.).\n\n**Overall totals:**\n- **963 purchase orders**\n- **$21,664,688.63** total spend\n\n**Breakdown by commodity (top categories by spend):**\n\n| Commodity | # Orders | Total Spend |\n|---|---|---|\n| Modular furniture connectors | 231 | $12,865,950.56 |\n| Desks | 217 | $2,999,741.43 |\n| Credenzas | 99 | $2,049,734.93 |\n| Filing cabinets or accessories | 173 | $2,019,376.39 |\n| Mail sorters or organizers | 41 | $853,760.31 |\n| Conferencing tables | 85 | $412,147.19 |\n| Table base | 28 | $180,943.03 |\n| Pedestals | 10 | $78,786.98 |\n| Side table | 12 | $66,193.66 |\n| Mobile files | 16 | $65,479.95 |\n| Desktop organizer hutches | 27 | $28,779.25 |\n| Drafting tables | 5 | $14,167.40 |\n| Table risers | 6 | $12,777.80 |\n| Projector stands or carts | 5 | $7,931.91 |\n| Showcases | 1 | $5,279.94 |\n| Desk returns | 6 | $2,980.00 |\n| Data binder racks | 1 | $657.90 |\n\n**Key takeaway:** \"Modular furniture connectors\" (essentially modular office workstation systems) dominates the spend at nearly $12.9M \u2014 over half of the total office furniture budget across the three fiscal years \u2014 followed by conventional Desks (~$3M) and Credenzas (~$2M)."
+  },
+  {
+    "id": "out-of-scope",
+    "category": "out_of_scope",
+    "status": "pass",
+    "answer": "I can only answer questions about the California state purchase order dataset (2012-2015). Try asking about spending, departments, suppliers, or specific items."
+  },
+  {
+    "id": "multi-step",
+    "category": "multi_step",
+    "status": "review",
+    "answer": "Among departments with more than 10,000 orders, the **Department of Transportation** has the highest average order value at approximately **$246,422.74** per order (based on 17,644 orders).\n\nFor comparison, the next highest were:\n- Department of State Hospitals: $239,648.36 avg (18,968 orders)\n- Department of General Services: $104,850.55 avg (10,813 orders)\n- Department of Water Resources: $98,488.09 avg (28,331 orders)\n- Correctional Health Care Services: $81,973.11 avg (32,250 orders)"
+  }
+]

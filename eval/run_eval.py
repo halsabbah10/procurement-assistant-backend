@@ -5,6 +5,7 @@ this script reports them as "review" rather than pass/fail.
 
 Usage: python eval/run_eval.py
 """
+
 import asyncio
 import json
 import sys
@@ -14,6 +15,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.agent.graph import run_agent  # noqa: E402
+from eval._util import normalize_dashes  # noqa: E402
 
 
 async def run_one(case: dict) -> tuple[str, str]:
@@ -31,7 +33,8 @@ async def run_one(case: dict) -> tuple[str, str]:
             final_text = chunk["text"]
     if not case["expect_contains"]:
         return "review", final_text
-    passed = any(expected in final_text for expected in case["expect_contains"])
+    normalized = normalize_dashes(final_text)
+    passed = any(expected in normalized for expected in case["expect_contains"])
     return ("pass" if passed else "fail"), final_text
 
 
@@ -40,13 +43,17 @@ async def main() -> None:
     results = []
     for case in cases:
         status, answer = await run_one(case)
-        results.append({"id": case["id"], "category": case["category"], "status": status, "answer": answer})
+        results.append(
+            {"id": case["id"], "category": case["category"], "status": status, "answer": answer}
+        )
         print(f"[{status.upper():6}] {case['id']}: {answer[:100]}")
 
     passed = sum(1 for r in results if r["status"] == "pass")
     failed = sum(1 for r in results if r["status"] == "fail")
     review = sum(1 for r in results if r["status"] == "review")
-    print(f"\n{passed} passed, {failed} failed, {review} need manual review, out of {len(results)} total.")
+    print(
+        f"\n{passed} passed, {failed} failed, {review} need manual review, out of {len(results)} total."
+    )
 
     (Path(__file__).parent / "results.json").write_text(json.dumps(results, indent=2))
 
