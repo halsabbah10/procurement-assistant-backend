@@ -17,7 +17,19 @@ jobs:
         # can take longer than a plain `mongo` image to accept connections.
         # GitHub Actions blocks steps on a service container until this
         # reports healthy.
+        #
+        # --hostname localhost: mongodb-atlas-local's entrypoint uses the
+        # container's own hostname to configure what its replica set
+        # advertises to clients. GitHub Actions service containers don't
+        # default this to something externally reachable (unlike a plain
+        # `docker run -p` on a dev machine, or a docker-compose network) -
+        # without it, the driver's initial connection succeeds but the
+        # replica-set-discovery reconnect that follows tries to reach the
+        # container's internal ID as a hostname and fails. Setting it to
+        # "localhost" matches how the job actually reaches this service
+        # (via the mapped port on localhost).
         options: >-
+          --hostname localhost
           --health-cmd "mongosh --eval 'db.runCommand({ping:1})' --quiet"
           --health-interval 5s
           --health-timeout 5s
