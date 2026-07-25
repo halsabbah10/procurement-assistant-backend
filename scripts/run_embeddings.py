@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from langchain_mongodb.vectorstores import MongoDBAtlasVectorSearch  # noqa: E402
 from langchain_voyageai import VoyageAIEmbeddings  # noqa: E402
 
+from app.agent.tools import EMBEDDING_DIMENSION  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.db.client import get_database  # noqa: E402
 from app.db.embeddings import dedupe_items  # noqa: E402
@@ -35,9 +36,13 @@ async def generate_embeddings() -> None:
     items = dedupe_items(rows)
     print(f"Deduped to {len(items)} distinct UNSPSC categories from {len(rows)} rows.")
 
-    await db.item_embeddings.delete_many({})
+    await db.item_embeddings.drop()
 
-    embeddings = VoyageAIEmbeddings(model="voyage-4", voyage_api_key=settings.voyage_api_key)
+    embeddings = VoyageAIEmbeddings(
+        model="voyage-4",
+        voyage_api_key=settings.voyage_api_key,
+        output_dimension=EMBEDDING_DIMENSION,
+    )
     vector_store = MongoDBAtlasVectorSearch.from_connection_string(
         connection_string=settings.mongodb_uri,
         namespace=f"{settings.mongodb_db_name}.item_embeddings",
@@ -57,13 +62,15 @@ async def generate_embeddings() -> None:
         for item in items
     ]
     vector_store.add_texts(texts=texts, metadatas=metadatas)
-
     print(f"Loaded {len(items)} category embeddings into item_embeddings.")
-    print(
-        "NOTE: on Atlas (cloud or mongodb-atlas-local), create the vector search "
-        f"index named '{INDEX_NAME}' on item_embeddings.embedding if "
-        "add_texts did not create it automatically for this MongoDB version."
-    )
+
+    # drop() above removes any pre-existing search index along with the
+    # collection, so this script must (re)create it on every run rather
+    # than assuming one already exists — this also guarantees the index's
+    # numDimensions always matches EMBEDDING_DIMENSION, instead of silently
+    # keeping a stale dimension from a previous run.
+    vector_store.create_vector_search_index(dimensions=EMBEDDING_DIMENSION, wait_until_complete=120)
+    print(f"Vector search index '{INDEX_NAME}' created and ready.")
 
 
 if __name__ == "__main__":
