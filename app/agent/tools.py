@@ -29,9 +29,10 @@ def build_semantic_search_tool():
     return create_retriever_tool(
         retriever,
         "semantic_search",
-        "Find purchase order item text and commodity categories that are "
-        "semantically related to a natural-language description, when the "
-        "exact wording won't match the data verbatim. Returns matching item "
-        "text and commodity titles you can then filter a structured "
-        "aggregation on.",
+        "Find UNSPSC purchasing categories (segment/family/class/commodity "
+        "titles) that are semantically related to a natural-language "
+        "description, when the exact wording won't match the data verbatim "
+        "(e.g. 'cybersecurity' -> 'Network security software'). Returns "
+        "matching commodity_title/class_title/family_title/segment_title "
+        "values you can then filter a structured aggregation on.",
     )

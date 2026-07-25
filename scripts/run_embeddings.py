@@ -24,10 +24,16 @@ async def generate_embeddings() -> None:
     db = get_database()
 
     rows = await db.purchase_orders.find(
-        {}, {"item_name": 1, "item_description": 1, "commodity_title": 1}
+        {},
+        {
+            "segment_title": 1,
+            "family_title": 1,
+            "class_title": 1,
+            "commodity_title": 1,
+        },
     ).to_list(length=None)
     items = dedupe_items(rows)
-    print(f"Deduped to {len(items)} distinct items from {len(rows)} rows.")
+    print(f"Deduped to {len(items)} distinct UNSPSC categories from {len(rows)} rows.")
 
     await db.item_embeddings.delete_many({})
 
@@ -40,10 +46,19 @@ async def generate_embeddings() -> None:
     )
 
     texts = [item["text"] for item in items]
-    metadatas = [{"commodity_title": item["commodity_title"], "text": item["text"]} for item in items]
+    metadatas = [
+        {
+            "text": item["text"],
+            "commodity_title": item["commodity_title"],
+            "class_title": item["class_title"],
+            "family_title": item["family_title"],
+            "segment_title": item["segment_title"],
+        }
+        for item in items
+    ]
     vector_store.add_texts(texts=texts, metadatas=metadatas)
 
-    print(f"Loaded {len(items)} item embeddings into item_embeddings.")
+    print(f"Loaded {len(items)} category embeddings into item_embeddings.")
     print(
         "NOTE: on Atlas (cloud or mongodb-atlas-local), create the vector search "
         f"index named '{INDEX_NAME}' on item_embeddings.embedding if "
