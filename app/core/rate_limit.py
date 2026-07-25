@@ -1,6 +1,7 @@
 """In-memory, single-instance rate limiting — a deliberate scope choice for
 a demo-scale deployment (see project_architecture.md). Would need Redis if
 this ever ran on more than one Render instance."""
+
 import time
 from collections import defaultdict
 

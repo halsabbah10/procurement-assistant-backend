@@ -22,7 +22,9 @@ EMBEDDING_DIMENSION = 512
 
 def build_structured_tools(llm) -> list:
     settings = get_settings()
-    db = MongoDBDatabase.from_connection_string(settings.mongodb_uri, database=settings.mongodb_db_name)
+    db = MongoDBDatabase.from_connection_string(
+        settings.mongodb_uri, database=settings.mongodb_db_name
+    )
     toolkit = MongoDBDatabaseToolkit(db=db, llm=llm)
     return toolkit.get_tools()
 

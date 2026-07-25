@@ -15,6 +15,7 @@ that "re-runs the query shown in the UI" would do. This parser uses
 additionally denies any aggregation stage that can write data, run
 server-side JavaScript, or read cluster-internal state.
 """
+
 from __future__ import annotations
 
 import json

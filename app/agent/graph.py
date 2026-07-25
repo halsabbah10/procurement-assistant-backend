@@ -1,10 +1,11 @@
 # backend/app/agent/graph.py
 """Outer orchestrator: run the ReAct agent on Sonnet 5; if it fails to
 produce a usable answer, escalate once to Opus 4.8 on the same thread."""
+
 from __future__ import annotations
 
 import asyncio
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import structlog
 from langchain_anthropic import ChatAnthropic
@@ -97,9 +98,7 @@ def _build_agent(model_name: str, checkpointer):
     # see and self-correct from, matching this design's intent that the
     # ReAct loop (not this file) handles bad-query retries, and reserving
     # the outer try/except here for genuine, unrecoverable failures.
-    tool_node = ToolNode(
-        tools, handle_tool_errors=True, awrap_tool_call=_cap_oversized_tool_result
-    )
+    tool_node = ToolNode(tools, handle_tool_errors=True, awrap_tool_call=_cap_oversized_tool_result)
     return create_react_agent(
         llm,
         tool_node,
@@ -254,9 +253,7 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
         # the guard can see the prior turn and correctly classify follow-ups
         # like "which suppliers did the top one use most?" — see
         # _is_out_of_scope's docstring for the bug this fixes.
-        prior_context = await asyncio.to_thread(
-            _get_last_assistant_text, checkpointer, thread_id
-        )
+        prior_context = await asyncio.to_thread(_get_last_assistant_text, checkpointer, thread_id)
         if await _is_out_of_scope(user_message, prior_context):
             yield {
                 "type": "final_answer",

@@ -37,9 +37,7 @@ async def rename_conversation(conversation_id: str, body: RenameRequest):
     title = body.title.strip()
     if not title:
         raise HTTPException(status_code=400, detail="Title cannot be empty.")
-    result = await db.conversations.update_one(
-        {"_id": conversation_id}, {"$set": {"title": title}}
-    )
+    result = await db.conversations.update_one({"_id": conversation_id}, {"$set": {"title": title}})
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Conversation not found.")
     return {"id": conversation_id, "title": title}

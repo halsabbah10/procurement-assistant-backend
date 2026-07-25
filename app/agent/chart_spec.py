@@ -10,6 +10,7 @@ a deterministic sanity check before ever handing anything to the frontend.
 The LLM decides *if a chart would help*; plain Python decides *whether the
 data can actually support one*.
 """
+
 from __future__ import annotations
 
 from typing import Literal
@@ -41,9 +42,7 @@ class ChartDecision(BaseModel):
     category_field: str | None = Field(
         default=None, description="The field name to use as the category/x-axis label."
     )
-    value_field: str | None = Field(
-        default=None, description="The numeric field name to plot."
-    )
+    value_field: str | None = Field(default=None, description="The numeric field name to plot.")
     title: str | None = Field(default=None, description="A short chart title, under 8 words.")
 
 

@@ -3,6 +3,7 @@ $vectorSearch index. Run after run_ingestion.py.
 
 Usage: python scripts/run_embeddings.py
 """
+
 import asyncio
 import sys
 from pathlib import Path

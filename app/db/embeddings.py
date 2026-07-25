@@ -19,6 +19,7 @@ The embedded text joins the full hierarchy (segment > family > class >
 commodity) for context, since a bare commodity title can be ambiguous
 without knowing which broader category it sits under.
 """
+
 from __future__ import annotations
 
 

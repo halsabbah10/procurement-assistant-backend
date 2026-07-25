@@ -3,6 +3,7 @@
 Usage: python scripts/run_ingestion.py /path/to/PURCHASE_ORDER_DATA_EXTRACT.csv
 Safe to re-run: drops and recreates the collection + indexes each time.
 """
+
 import asyncio
 import csv
 import sys

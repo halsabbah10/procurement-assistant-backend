@@ -20,7 +20,10 @@ def test_dedupe_items_collapses_identical_category_hierarchy():
     deduped = dedupe_items(rows)
     assert len(deduped) == 2
     texts = {d["text"] for d in deduped}
-    assert "Food Beverage and Tobacco Products > Fresh vegetables > Peppers > Jalapeno peppers" in texts
+    assert (
+        "Food Beverage and Tobacco Products > Fresh vegetables > Peppers > Jalapeno peppers"
+        in texts
+    )
     assert (
         "Information Technology Broadcasting and Telecommunications > Software > "
         "Security and protection software > Network security or virtual private "
@@ -37,13 +40,22 @@ def test_dedupe_items_preserves_hierarchy_fields_as_metadata():
 
 
 def test_dedupe_items_skips_rows_with_no_commodity_title():
-    rows = [{"segment_title": "x", "family_title": "y", "class_title": "z", "commodity_title": None}]
+    rows = [
+        {"segment_title": "x", "family_title": "y", "class_title": "z", "commodity_title": None}
+    ]
     assert dedupe_items(rows) == []
 
 
 def test_dedupe_items_handles_missing_upper_hierarchy_gracefully():
     # A row with a commodity_title but missing segment/family/class shouldn't
     # crash or produce a text starting with stray " > " separators.
-    rows = [{"segment_title": None, "family_title": None, "class_title": None, "commodity_title": "Jalapeno peppers"}]
+    rows = [
+        {
+            "segment_title": None,
+            "family_title": None,
+            "class_title": None,
+            "commodity_title": "Jalapeno peppers",
+        }
+    ]
     deduped = dedupe_items(rows)
     assert deduped[0]["text"] == "Jalapeno peppers"

@@ -7,6 +7,7 @@ Field quirks (verified against the full 346,018-row dataset, not assumed):
   failed upstream). lat/lon must be treated as independently optional.
 - Dates are 100% uniform MM/DD/YYYY strings — no fallback parsing needed.
 """
+
 from __future__ import annotations
 
 import re

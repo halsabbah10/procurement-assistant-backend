@@ -79,11 +79,19 @@ async def summary():
 
     return {
         "by_fiscal_year": [
-            {"fiscal_year": r["_id"], "total_spend": r["total_spend"], "order_count": r["order_count"]}
+            {
+                "fiscal_year": r["_id"],
+                "total_spend": r["total_spend"],
+                "order_count": r["order_count"],
+            }
             for r in by_fiscal_year
         ],
         "top_departments": [
-            {"department": r["_id"], "total_spend": r["total_spend"], "order_count": r["order_count"]}
+            {
+                "department": r["_id"],
+                "total_spend": r["total_spend"],
+                "order_count": r["order_count"],
+            }
             for r in top_departments
         ],
         "by_acquisition_type": [
@@ -123,7 +131,9 @@ async def department_detail(department_name: str):
         ]
     ).to_list(length=1)
     if not totals:
-        raise HTTPException(status_code=404, detail=f"No records for department '{department_name}'.")
+        raise HTTPException(
+            status_code=404, detail=f"No records for department '{department_name}'."
+        )
 
     by_fiscal_year = await db.purchase_orders.aggregate(
         [

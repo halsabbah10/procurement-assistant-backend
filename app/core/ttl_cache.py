@@ -2,9 +2,11 @@
 endpoints. Same single-instance scope assumption as RateLimiter (see
 app/core/rate_limit.py) — would need Redis if this ever ran on more than
 one Render instance."""
+
 import time
+from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Awaitable, Callable, TypeVar
+from typing import TypeVar
 
 T = TypeVar("T")
 
