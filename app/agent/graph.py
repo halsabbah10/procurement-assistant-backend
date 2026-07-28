@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import AsyncIterator
 
+import anthropic
 import structlog
 from langchain_anthropic import ChatAnthropic
 from langgraph.checkpoint.mongodb import MongoDBSaver
@@ -306,6 +307,34 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
                         # hit this before the fix.
                         final_text = last_message.text
                         yield {"type": "step", "text": f"[{model_name}] {final_text[:80]}"}
+            except (anthropic.RateLimitError, anthropic.OverloadedError) as exc:
+                # Distinct from the generic except below: this is Anthropic
+                # itself throttling or shedding load, not a bug in the
+                # question or the pipeline. Telling a user to "rephrase" a
+                # rate-limit error is actively misleading and just
+                # encourages more retries — which, under concurrent load,
+                # is exactly what compounds the problem (reproduced live:
+                # 4 concurrent requests for the same question went from
+                # ~45s to 115-125s each). Say what's actually happening.
+                log.error(
+                    "agent_rate_limited",
+                    model=model_name,
+                    is_escalation=is_escalation,
+                    thread_id=thread_id,
+                    error=str(exc),
+                )
+                if is_escalation:
+                    result = {
+                        "type": "final_answer",
+                        "text": "The system is handling a lot of requests right now — "
+                        "please wait a few seconds before trying again (retrying "
+                        "immediately makes this worse, not better).",
+                    }
+                    if last_query:
+                        result["query"] = last_query
+                    yield result
+                    return
+                continue
             except Exception as exc:  # noqa: BLE001 — deliberately broad: any
                 # failure on the Sonnet attempt should trigger escalation,
                 # not crash the request.
@@ -336,19 +365,27 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
                 result = {"type": "final_answer", "text": final_text}
                 if last_query:
                     result["query"] = last_query
-                # Independent Haiku calls — run concurrently rather than
-                # sequentially awaited, since neither depends on the
-                # other's result. Halves the added latency of these two
-                # best-effort enrichments.
+                # Yield the real answer immediately rather than waiting on
+                # the two enrichment calls below — those are best-effort
+                # extras, not part of what the user actually asked for.
+                # Previously this whole block awaited suggestions+chart
+                # BEFORE the user saw anything, adding several more seconds
+                # of total silence on top of an already-slow request and
+                # making it more tempting to assume something broke and
+                # retry. The frontend now expects a follow-up "enrichment"
+                # chunk after "final_answer" instead of everything in one.
+                yield result
                 suggestions, chart = await asyncio.gather(
                     _generate_followups(user_message, final_text),
                     build_chart(user_message, last_query) if last_query else _no_chart(),
                 )
-                if suggestions:
-                    result["suggestions"] = suggestions
-                if chart:
-                    result["chart"] = chart
-                yield result
+                if suggestions or chart:
+                    enrichment = {"type": "enrichment"}
+                    if suggestions:
+                        enrichment["suggestions"] = suggestions
+                    if chart:
+                        enrichment["chart"] = chart
+                    yield enrichment
                 return
 
         yield {
