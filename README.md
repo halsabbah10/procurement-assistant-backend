@@ -12,8 +12,11 @@ Deployed on Render (backend) and Vercel (frontend) — live URLs shared
 separately with the assessment submission rather than published here.
 
 > First request after ~15 minutes of inactivity takes 30–60s — Render's free
-> tier spins the instance down when idle. The frontend shows a "waking up"
-> state for this.
+> tier spins the instance down when idle. The frontend doesn't detect a cold
+> start specifically (a cold start and a genuinely slow multi-hop
+> Sonnet→Opus chain look identical from the client's side), but it does show
+> a generic "still working" hint after 15s of no progress on any slow
+> request, cold-start or not (see `ChatPanel.tsx`'s `SLOW_RESPONSE_HINT_MS`).
 
 ## How it works
 
