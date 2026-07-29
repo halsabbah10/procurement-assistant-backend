@@ -1,0 +1,14 @@
+# Never bake local secrets into an image layer.
+.env
+.env.*
+!.env.example
+
+.git
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+tests
+eval/results*.json
+.github
