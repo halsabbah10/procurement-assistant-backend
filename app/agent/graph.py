@@ -17,7 +17,11 @@ from pymongo import MongoClient
 
 from app.agent.chart_spec import build_chart
 from app.agent.prompts import SYSTEM_PROMPT
-from app.agent.tools import build_semantic_search_tool, build_structured_tools
+from app.agent.tools import (
+    build_mongo_resources,
+    build_semantic_search_tool,
+    build_structured_tools,
+)
 from app.core.config import get_settings
 
 log = structlog.get_logger()
@@ -60,6 +64,19 @@ MAX_ITERATIONS = 40
 # under both the BSON limit and a sane single-tool-result context budget.
 TOOL_RESULT_MAX_CHARS = 50_000
 
+# langgraph's prebuilt create_react_agent executor injects this exact
+# message (no tool_calls) and ends normally — no exception — when
+# remaining_steps drops below 2 and the model still wants to call a tool.
+# Structurally it looks identical to a real final answer (an "ai" message
+# with no tool_calls), so without this check it silently satisfied the
+# `if final_text:` branch below and got `return`ed to the user as a
+# successful response on the very first (Sonnet) attempt — permanently
+# skipping the Opus escalation this whole loop exists to provide, on
+# exactly the complex/near-budget questions escalation is meant to rescue.
+# Raising MAX_ITERATIONS to 40 (above) reduced how often this fires; it
+# doesn't make the loop notice when it still does.
+STEP_BUDGET_EXHAUSTED_MESSAGE = "Sorry, need more steps to process this request."
+
 
 async def _cap_oversized_tool_result(request, handler):
     """awrap_tool_call hook for ToolNode: turn a successful-but-huge tool
@@ -78,10 +95,17 @@ async def _cap_oversized_tool_result(request, handler):
     return result
 
 
-def _build_agent(model_name: str, checkpointer):
+def _build_agent(model_name: str, checkpointer, mongo_client, mongo_db, database_name: str):
     settings = get_settings()
     llm = ChatAnthropic(model=model_name, api_key=settings.anthropic_api_key, max_tokens=4096)
-    tools = build_structured_tools(llm) + [build_semantic_search_tool()]
+    # mongo_client/mongo_db are built once per request (run_agent) and
+    # reused across both the Sonnet and Opus attempts here, rather than
+    # each call opening its own fresh MongoDB connections (previously up
+    # to 3 per attempt: the toolkit's own, the vector store's, plus a live
+    # listCollections round trip) — see build_mongo_resources's docstring.
+    tools = build_structured_tools(llm, mongo_client, database_name, mongo_db) + [
+        build_semantic_search_tool(mongo_client, database_name)
+    ]
     # NOTE: langgraph 1.2.9's ToolNode default (`handle_tool_errors` defaults
     # to a handler that only catches its own ToolInvocationError and
     # re-raises everything else) no longer swallows generic tool exceptions
@@ -247,6 +271,7 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
     # so those explicit `.close()` calls would never execute and the
     # MongoClient (with its own connection pool) would leak. A try/finally
     # around the whole body runs on every exit path, including GeneratorExit.
+    query_client, query_db = build_mongo_resources(settings)
     try:
         checkpointer = MongoDBSaver(mongo_client)
 
@@ -275,7 +300,9 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
         # final answer actually came from.
         last_query: str | None = None
         for model_name, is_escalation in ((SONNET_MODEL, False), (OPUS_MODEL, True)):
-            agent = _build_agent(model_name, checkpointer)
+            agent = _build_agent(
+                model_name, checkpointer, query_client, query_db, settings.mongodb_db_name
+            )
             final_text = None
             try:
                 async for event in agent.astream(
@@ -305,7 +332,22 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
                         # would violate the str contract the SSE router
                         # (Task 12) depends on. Reproduced live: ~50% of runs
                         # hit this before the fix.
-                        final_text = last_message.text
+                        text = last_message.text
+                        if text == STEP_BUDGET_EXHAUSTED_MESSAGE:
+                            # Not a real answer — langgraph's own step-budget
+                            # guard message (see the constant's docstring).
+                            # Leave final_text unset so the `if final_text:`
+                            # check below falls through to the Opus attempt
+                            # instead of returning this to the user as a
+                            # successful response.
+                            log.warning(
+                                "agent_step_budget_exhausted",
+                                model=model_name,
+                                is_escalation=is_escalation,
+                                thread_id=thread_id,
+                            )
+                            continue
+                        final_text = text
                         yield {"type": "step", "text": f"[{model_name}] {final_text[:80]}"}
             except (anthropic.RateLimitError, anthropic.OverloadedError) as exc:
                 # Distinct from the generic except below: this is Anthropic
@@ -395,3 +437,4 @@ async def run_agent(user_message: str, thread_id: str) -> AsyncIterator[dict]:
         }
     finally:
         mongo_client.close()
+        query_client.close()

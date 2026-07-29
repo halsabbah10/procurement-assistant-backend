@@ -8,7 +8,7 @@ from fastapi.responses import Response
 
 from app.core.rate_limit import RateLimiter
 from app.db.client import get_database
-from app.db.safe_pipeline import InvalidQueryError, parse_and_validate_pipeline
+from app.db.safe_pipeline import MAX_QUERY_TIME_MS, InvalidQueryError, parse_and_validate_pipeline
 from app.schemas.export import ExportRequest
 
 router = APIRouter()
@@ -16,6 +16,12 @@ router = APIRouter()
 # an LLM, but still runs a MongoDB aggregation on shared free-tier infra and
 # must not be hammered.
 limiter = RateLimiter(per_minute=10, daily_cap=100)
+
+# This app only ever stores purchase order data and its category embeddings
+# in the `procurement` database — deliberately not derived from whatever
+# collections happen to exist live, so a future new collection (audit logs,
+# anything else) doesn't become silently exportable without a code change.
+EXPORTABLE_COLLECTIONS = {"purchase_orders"}
 
 
 def _sanitize(value):
@@ -60,12 +66,14 @@ async def export_query(request: Request, body: ExportRequest):
     limiter.record(client_ip)
 
     try:
-        pipeline = parse_and_validate_pipeline(body.query)
+        collection, pipeline = parse_and_validate_pipeline(body.query, EXPORTABLE_COLLECTIONS)
     except InvalidQueryError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     db = get_database()
-    raw_rows = await db.purchase_orders.aggregate(pipeline).to_list(length=None)
+    raw_rows = (
+        await db[collection].aggregate(pipeline, maxTimeMS=MAX_QUERY_TIME_MS).to_list(length=None)
+    )
     rows = [_sanitize(row) for row in raw_rows]
 
     if not rows:

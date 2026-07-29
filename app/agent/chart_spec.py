@@ -21,11 +21,21 @@ from pydantic import BaseModel, Field
 
 from app.core.config import get_settings
 from app.db.client import get_database
-from app.db.safe_pipeline import InvalidQueryError, parse_and_validate_pipeline
+from app.db.safe_pipeline import (
+    MAX_QUERY_TIME_MS,
+    InvalidQueryError,
+    parse_and_validate_pipeline,
+)
 
 HAIKU_MODEL = "claude-haiku-4-5"
 CHART_PREVIEW_ROWS = 15
 MAX_CHART_CATEGORIES = 12
+
+# Chartable collections: the agent's structured mongodb_query tool can
+# legitimately run against either of this app's real collections (Mongo
+# toolkit exposes both), even though semantic_search is the normal path
+# into item_embeddings — see tools.py's ALLOWED_QUERY_COLLECTIONS.
+CHARTABLE_COLLECTIONS = {"purchase_orders", "item_embeddings"}
 
 
 class ChartDecision(BaseModel):
@@ -102,13 +112,17 @@ async def build_chart(user_message: str, query: str) -> dict | None:
     None. Never raises — a failure here should never affect the real
     answer, only mean no chart is attached."""
     try:
-        pipeline = parse_and_validate_pipeline(query)
+        collection, pipeline = parse_and_validate_pipeline(query, CHARTABLE_COLLECTIONS)
     except InvalidQueryError:
         return None
 
     try:
         db = get_database()
-        rows = await db.purchase_orders.aggregate(pipeline).to_list(length=CHART_PREVIEW_ROWS)
+        rows = (
+            await db[collection]
+            .aggregate(pipeline, maxTimeMS=MAX_QUERY_TIME_MS)
+            .to_list(length=CHART_PREVIEW_ROWS)
+        )
     except Exception:  # noqa: BLE001 — best-effort, see docstring
         return None
 
