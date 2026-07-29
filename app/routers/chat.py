@@ -1,11 +1,10 @@
 import json
 
 import structlog
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from app.agent.graph import run_agent
-from app.core.client_id import get_client_id
 from app.core.config import get_settings
 from app.core.rate_limit import RateLimiter
 from app.db.conversations import touch_conversation
@@ -20,7 +19,7 @@ limiter = RateLimiter(
 
 
 @router.post("/api/chat")
-async def chat(request: Request, body: ChatRequest, client_id: str | None = Depends(get_client_id)):
+async def chat(request: Request, body: ChatRequest):
     client_ip = request.client.host if request.client else "unknown"
     if not limiter.check(client_ip):
         return StreamingResponse(
@@ -33,7 +32,7 @@ async def chat(request: Request, body: ChatRequest, client_id: str | None = Depe
             status_code=429,
         )
     limiter.record(client_ip)
-    await touch_conversation(body.conversation_id, body.message, client_id)
+    await touch_conversation(body.conversation_id, body.message)
 
     async def event_stream():
         try:
