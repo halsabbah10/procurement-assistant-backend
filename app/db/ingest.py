@@ -21,7 +21,25 @@ def parse_price(raw: str) -> float | None:
     if not raw:
         return None
     cleaned = raw.replace("$", "").replace(",", "")
-    return float(cleaned)
+    try:
+        return float(cleaned)
+    except ValueError:
+        # Same rationale as parse_location's fallback below: malformed
+        # rows (a stray footnote character, "N/A", "TBD") should not crash
+        # ingestion of the other 345,999 rows. Unlike parse_location this
+        # has no partial-data shape to preserve, so None is the whole
+        # fallback.
+        return None
+
+
+def parse_quantity(raw: str) -> float | None:
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def parse_qualifications(raw: str) -> list[str]:
@@ -91,7 +109,7 @@ def clean_document(raw_row: dict) -> dict:
         "calcard": raw_row["CalCard"] == "YES",
         "item_name": raw_row["Item Name"] or None,
         "item_description": raw_row["Item Description"] or None,
-        "quantity": float(raw_row["Quantity"]) if raw_row["Quantity"] else None,
+        "quantity": parse_quantity(raw_row["Quantity"]),
         "unit_price": parse_price(raw_row["Unit Price"]),
         "total_price": parse_price(raw_row["Total Price"]),
         "classification_codes": raw_row["Classification Codes"] or None,

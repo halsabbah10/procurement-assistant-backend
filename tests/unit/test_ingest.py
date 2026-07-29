@@ -7,6 +7,7 @@ from app.db.ingest import (
     parse_location,
     parse_price,
     parse_qualifications,
+    parse_quantity,
 )
 
 
@@ -20,6 +21,31 @@ def test_parse_price_handles_negative_credit():
 
 def test_parse_price_empty_string_is_none():
     assert parse_price("") is None
+
+
+def test_parse_price_malformed_value_degrades_to_none_not_a_crash():
+    # Real-world CSV exports occasionally have a stray non-numeric value
+    # ("N/A", "TBD", a footnote character) in a price column. Before this
+    # fix, float(cleaned) raised uncaught here — since run_ingestion.py
+    # wipes the collection (delete_many({})) before inserting incrementally
+    # with no resume checkpoint, a single bad row anywhere in the 346,018
+    # took down the whole run and left production partially repopulated.
+    assert parse_price("N/A") is None
+    assert parse_price("TBD") is None
+    assert parse_price("--") is None
+
+
+def test_parse_quantity_valid_value():
+    assert parse_quantity("3") == 3.0
+
+
+def test_parse_quantity_empty_is_none():
+    assert parse_quantity("") is None
+
+
+def test_parse_quantity_malformed_value_degrades_to_none_not_a_crash():
+    assert parse_quantity("N/A") is None
+    assert parse_quantity("1 EA") is None
 
 
 def test_parse_qualifications_splits_on_whitespace_not_comma():
